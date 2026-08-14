@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#13251f" />
+  <meta name="description" content="Planejamento e execução de rotas de coleta." />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <link rel="stylesheet" href="/styles.css" />
+  <title>Rota Próxima</title>
+</head>
+<body><div class="ambiente-teste-badge">AMBIENTE DE TESTE</div>
+  <div id="toast" class="toast hidden"></div>
+
+  <main id="authScreen" class="auth-screen">
+    <section class="auth-card">
+      <div class="auth-brand">
+        <div class="brand-mark">RP</div>
+        <div>
+          <h1>Rota Próxima</h1>
+          <p>Planejamento no escritório. Execução simples no celular.</p>
+        </div>
+      </div>
+
+      <form id="loginForm" class="stack hidden">
+        <div>
+          <span class="eyebrow">Acesso</span>
+          <h2>Entrar no sistema</h2>
+        </div>
+        <label class="field"><span>Usuário</span><input id="loginUsername" autocomplete="username" required /></label>
+        <label class="field"><span>Senha</span><input id="loginPassword" type="password" autocomplete="current-password" required /></label>
+        <button class="btn primary wide" type="submit">Entrar</button>
+      </form>
+
+      <form id="setupForm" class="stack hidden">
+        <div>
+          <span class="eyebrow">Primeiro acesso</span>
+          <h2>Criar administrador</h2>
+          <p class="muted">Este usuário terá controle total e poderá cadastrar Comercial, Gerente Comercial e Motoristas.</p>
+        </div>
+        <label class="field"><span>Seu nome</span><input id="setupName" required /></label>
+        <label class="field"><span>Usuário</span><input id="setupUsername" minlength="3" required /></label>
+        <label class="field"><span>Senha</span><input id="setupPassword" type="password" minlength="8" required /></label>
+        <button class="btn primary wide" type="submit">Criar administrador</button>
+      </form>
+    </section>
+  </main>
+
+  <div id="appShell" class="app-shell hidden">
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-mark small">RP</div>
+        <div><strong>Rota Próxima</strong><span id="sidebarRole"></span></div>
+      </div>
+      <nav id="nav" class="nav"></nav>
+      <div class="sidebar-footer">
+        <div id="currentUserCard" class="user-card"></div>
+        <button id="logoutBtn" class="btn ghost wide" type="button">Sair</button>
+      </div>
+    </aside>
+
+    <header class="mobile-header">
+      <button id="menuBtn" class="icon-btn" type="button">☰</button>
+      <strong>Rota Próxima</strong>
+      <span id="mobileUserInitial" class="avatar"></span>
+    </header>
+
+    <section class="main-area">
+      <div id="page" class="page"></div>
+    </section>
+  </div>
+
+  <dialog id="modal" class="modal">
+    <div id="modalContent"></div>
+  </dialog>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="/app.js"></script>
+</body>
+</html>

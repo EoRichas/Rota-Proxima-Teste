@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: rota-proxima-teste
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py
+    envVars:
+      - key: SUPABASE_URL
+        value: https://wzonboudahxbyzoxnehx.supabase.co
+      - key: SUPABASE_PUBLISHABLE_KEY
+        value: sb_publishable_DEYdfPXQNKi6Eot4mZgVfA_eR5GvkS0
+      - key: FORCE_SECURE_COOKIES
+        value: true
