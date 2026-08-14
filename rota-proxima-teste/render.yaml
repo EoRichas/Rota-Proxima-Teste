@@ -4,7 +4,7 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python server.py
+    startCommand: python server_sharepoint.py
     envVars:
       - key: SUPABASE_URL
         value: https://wzonboudahxbyzoxnehx.supabase.co
@@ -12,3 +12,5 @@ services:
         value: sb_publishable_DEYdfPXQNKi6Eot4mZgVfA_eR5GvkS0
       - key: FORCE_SECURE_COOKIES
         value: true
+      - key: AZURE_FUNCTION_UPLOAD_URL
+        sync: false
