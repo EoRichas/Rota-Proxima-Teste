@@ -43,6 +43,7 @@ const priorityLabel = {urgent:'Urgente',high:'Alta',normal:'Normal',low:'Baixa'}
 const serviceTypeLabel = {collection:'Coleta',delivery:'Entrega'};
 const roleLabel = {admin:'Administrador',commercial_manager:'Gerente Comercial',commercial:'Comercial',driver:'Motorista'};
 const requestStatusLabel = {pending:'Pendente',scheduled:'Em rota',in_service:'Em atendimento',completed:'Concluída',not_completed:'Não realizada',cancelled:'Cancelada'};
+const SHAREPOINT_ONLY = true;
 const apiCache = new Map();
 const apiPending = new Map();
 const apiCacheTtl = path => path.startsWith('/api/pevs') ? 30000 : path==='/api/drivers' ? 30000 : path==='/api/settings' ? 30000 : path==='/api/users' ? 15000 : 0;
@@ -149,7 +150,7 @@ function enterApp(user) {
   renderNav();
   const initial = user.role === 'driver' ? 'driver' : user.role === 'commercial' ? 'requests' : 'dashboard';
   go(initial);
-  if (user.role === 'admin') restoreLocalSyncHandle().catch(()=>{});
+  if (user.role === 'admin' && !SHAREPOINT_ONLY) restoreLocalSyncHandle().catch(()=>{});
 }
 
 function renderNav() {
@@ -157,13 +158,14 @@ function renderNav() {
   if (state.user.role === 'driver') items=[['driver','Minha rota'],['history','Histórico']];
   else if (state.user.role === 'commercial') items=[['requests','Solicitações'],['pevs','PEVs / Locais'],['reports','Meu relatório']];
   else if (state.user.role === 'commercial_manager') items=[['dashboard','Dashboard'],['routes','Rotas'],['requests','Solicitações'],['reports','Relatório operacional'],['pevs','PEVs / Locais']];
-  else items=[['dashboard','Dashboard'],['requests','Solicitações'],['planner','Planejar rota'],['pevs','PEVs / Locais'],['routes','Rotas'],['users','Usuários'],['reports','Relatório operacional'],['photo-sync','Fotos no computador'],['settings','Configurações']];
+  else items=[['dashboard','Dashboard'],['requests','Solicitações'],['planner','Planejar rota'],['pevs','PEVs / Locais'],['routes','Rotas'],['users','Usuários'],['reports','Relatório operacional'],['settings','Configurações']];
   $('#nav').innerHTML = items.map(([id,label]) => `<button data-page="${id}">${label}</button>`).join('');
   $$('#nav button').forEach(b => b.onclick = () => { $('#sidebar').classList.remove('open'); go(b.dataset.page); });
 }
 
 async function go(page) {
   if (state.routeListTimer) { clearInterval(state.routeListTimer); state.routeListTimer = null; }
+  if (SHAREPOINT_ONLY && page === 'photo-sync') page = 'dashboard';
   state.page = page;
   $$('#nav button').forEach(b => b.classList.toggle('active', b.dataset.page === page));
   $('#page').innerHTML = `<div class="empty">Carregando...</div>`;
@@ -806,6 +808,7 @@ async function handlePermission(handle,ask=false){
   return false;
 }
 async function restoreLocalSyncHandle(){
+  if(SHAREPOINT_ONLY)return;
   if(!fsApiAvailable())return;
   try{
     const h=await idbGetHandle();
@@ -823,6 +826,8 @@ async function chooseLocalSyncFolder(){
 }
 function startLocalSyncTimer(){
   if(state.localSyncTimer)clearInterval(state.localSyncTimer);
+  state.localSyncTimer=null;
+  if(SHAREPOINT_ONLY)return;
   state.localSyncTimer=setInterval(()=>syncEvidenceFiles(false).catch(()=>{}),120000);
 }
 async function ensureDir(root,parts){ let d=root; for(const part of parts)d=await d.getDirectoryHandle(cleanFsName(part),{create:true}); return d; }

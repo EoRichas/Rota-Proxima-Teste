@@ -192,6 +192,11 @@ def upload_test_evidence(token, data_url, path_prefix):
 
 class SharePointHandler(rota.AppHandler):
     def api_get(self, path):
+        if path in ('/api/evidence-sync','/api/evidence-sync/file'):
+            user=self.require_user()
+            if not user:return
+            if user.get('role')!='admin':return self.send_json({'error':'Sem permissão'},403)
+            return self.send_json({'error':'Sincronização local desativada neste ambiente. As fotos são enviadas automaticamente ao SharePoint.'},410)
         if path == '/api/health':
             return self.send_json({
                 'ok': True,

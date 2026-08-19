@@ -556,16 +556,32 @@ class AppHandler(BaseHTTPRequestHandler):
         self.send_header('Permissions-Policy','geolocation=(self)')
         if self.is_secure_request():
             self.send_header('Strict-Transport-Security','max-age=15552000; includeSubDomains')
+    def _client_disconnected(self,exc):
+        self.close_connection=True
+        method=getattr(self,'command','?')
+        path=urllib.parse.urlparse(getattr(self,'path','?')).path or '?'
+        print(f'[CLIENT DISCONNECTED] {method} {path}: {type(exc).__name__}')
+    def _send_payload(self,raw,content_type,status=200,cache_control='no-store',extra_headers=None):
+        try:
+            self.send_response(status)
+            self.send_header('Content-Type',content_type)
+            self.send_header('Content-Length',str(len(raw)))
+            self.send_header('Cache-Control',cache_control)
+            self.common_security_headers()
+            for k,v in (getattr(self,'pending_headers',[]) or []):self.send_header(k,v)
+            for k,v in (extra_headers or {}).items():self.send_header(k,v)
+            self.end_headers()
+            self.wfile.write(raw)
+            return True
+        except (BrokenPipeError,ConnectionResetError,ConnectionAbortedError) as exc:
+            self._client_disconnected(exc)
+            return False
     def send_json(self,obj,status=200,extra_headers=None):
-        raw=json.dumps(obj,ensure_ascii=False,default=str).encode();self.send_response(status);self.send_header('Content-Type','application/json; charset=utf-8');self.send_header('Content-Length',str(len(raw)));self.send_header('Cache-Control','no-store');self.common_security_headers()
-        for k,v in (getattr(self,'pending_headers',[]) or []):self.send_header(k,v)
-        for k,v in (extra_headers or {}).items():self.send_header(k,v)
-        self.end_headers();self.wfile.write(raw)
+        raw=json.dumps(obj,ensure_ascii=False,default=str).encode()
+        return self._send_payload(raw,'application/json; charset=utf-8',status,extra_headers=extra_headers)
     def send_bytes(self,raw,content_type='application/octet-stream',status=200,filename=None):
-        self.send_response(status);self.send_header('Content-Type',content_type);self.send_header('Content-Length',str(len(raw)));self.send_header('Cache-Control','no-store');self.common_security_headers()
-        if filename:self.send_header('Content-Disposition',f'attachment; filename="{filename}"')
-        for k,v in (getattr(self,'pending_headers',[]) or []):self.send_header(k,v)
-        self.end_headers();self.wfile.write(raw)
+        headers={'Content-Disposition':f'attachment; filename="{filename}"'} if filename else None
+        return self._send_payload(raw,content_type,status,extra_headers=headers)
     def auth_tokens(self):
         c=self.cookies();return c.get('rota_access'),c.get('rota_refresh')
     def clear_auth_headers(self):
@@ -789,10 +805,18 @@ class AppHandler(BaseHTTPRequestHandler):
                     dump[table]=Supa.get(table,t,{'select':'*','order':'id.asc'} if table not in ('settings','profiles') else {'select':'*'})
                 return self.send_json({'exported_at':now_iso(),'data':dump})
             return self.send_json({'error':'Endpoint não encontrado'},404)
-        except Exception as e:return self.send_json({'error':str(e)},400)
+        except (BrokenPipeError,ConnectionResetError,ConnectionAbortedError) as e:
+            self._client_disconnected(e)
+            return
+        except Exception as e:
+            print(f'[API ERROR] GET {path}: {type(e).__name__}: {e}')
+            return self.send_json({'error':str(e)},400)
 
     def api_write(self,method,path):
         try:data=self.read_json()
+        except (BrokenPipeError,ConnectionResetError,ConnectionAbortedError) as e:
+            self._client_disconnected(e)
+            return
         except Exception as e:return self.send_json({'error':f'JSON inválido: {e}'},400)
         try:
             if path=='/api/setup' and method=='POST':return self.send_json(edge('setup',data),201)
@@ -1032,6 +1056,9 @@ class AppHandler(BaseHTTPRequestHandler):
                 if role!='admin':return self.send_json({'error':'Sem permissão'},403)
                 old=first(Supa.get('settings',t,{'id':'eq.1','select':'*'}));upd={k:data.get(k) for k in ['company_name','origin_name','origin_mode','origin_cep','origin_street','origin_number','origin_complement','origin_district','origin_city','origin_state']};upd['origin_lat']=num(data.get('origin_lat'));upd['origin_lng']=num(data.get('origin_lng'));upd['origin_location_confirmed']=upd['origin_lat'] is not None and upd['origin_lng'] is not None;Supa.update('settings',t,{'id':'eq.1'},upd);audit(t,u,'update','settings',1,'Configurações alteradas',old,upd);return self.send_json({'ok':True})
             return self.send_json({'error':'Endpoint não encontrado'},404)
+        except (BrokenPipeError,ConnectionResetError,ConnectionAbortedError) as e:
+            self._client_disconnected(e)
+            return
         except RuntimeError as e:
             msg=str(e);print(f'[API ERROR] {method} {path}: {msg}');status=409 if 'duplicate key' in msg.lower() or 'violates unique' in msg.lower() or 'já existe' in msg.lower() else 400;return self.send_json({'error':msg},status)
         except Exception as e:
@@ -1045,7 +1072,10 @@ class AppHandler(BaseHTTPRequestHandler):
         try:target.relative_to(STATIC_DIR.resolve())
         except:return self.send_error(403)
         if not target.is_file():return self.send_error(404)
-        data=target.read_bytes();ctype=mimetypes.guess_type(str(target))[0] or 'application/octet-stream';self.send_response(200);self.send_header('Content-Type',ctype);self.send_header('Content-Length',str(len(data)));self.send_header('Cache-Control','no-cache' if target.name in ('index.html','app.js','service-worker.js','sw.js') else 'public, max-age=3600');self.common_security_headers();self.end_headers();self.wfile.write(data)
+        data=target.read_bytes()
+        ctype=mimetypes.guess_type(str(target))[0] or 'application/octet-stream'
+        cache_control='no-cache' if target.name in ('index.html','app.js','service-worker.js','sw.js') else 'public, max-age=3600'
+        return self._send_payload(data,ctype,cache_control=cache_control)
     def log_message(self,fmt,*args): print(f'[{datetime.now().strftime("%H:%M:%S")}] {self.address_string()} - {fmt%args}')
 
 class RotaHTTPServer(ThreadingHTTPServer):
