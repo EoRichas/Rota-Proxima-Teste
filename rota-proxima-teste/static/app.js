@@ -54,6 +54,16 @@ function toast(msg, type='') {
   clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.add('hidden'), 3200);
 }
 
+function showAuthScreen(needsSetup=false, message='') {
+  $('#appShell').classList.add('hidden');
+  $('#authScreen').classList.remove('hidden');
+  $('#setupForm').classList.toggle('hidden', !needsSetup);
+  $('#loginForm').classList.toggle('hidden', needsSetup);
+  const status=$('#authStatus');
+  status.textContent=message;
+  status.classList.toggle('hidden', !message);
+}
+
 async function api(path, opts={}) {
   const method=(opts.method||'GET').toUpperCase();
   const ttl=method==='GET'?apiCacheTtl(path):0;
@@ -105,14 +115,22 @@ async function getPosition(required=false) {
 }
 
 async function boot() {
+  let sessionError='';
   try {
     const me = await api('/api/me');
     if (me.user) return enterApp(me.user);
+  } catch (e) {
+    sessionError=e.message || 'Não foi possível verificar sua sessão.';
+  }
+  try {
     const setup = await api('/api/setup-status');
-    $('#authScreen').classList.remove('hidden');
-    $('#setupForm').classList.toggle('hidden', !setup.needs_setup);
-    $('#loginForm').classList.toggle('hidden', setup.needs_setup);
-  } catch (e) { toast(e.message, 'error'); }
+    showAuthScreen(!!setup.needs_setup,sessionError);
+    if(sessionError)toast(sessionError,'error');
+  } catch (e) {
+    const message=sessionError || e.message || 'Não foi possível carregar o acesso.';
+    showAuthScreen(false,message);
+    toast(message,'error');
+  }
 }
 
 $('#setupForm').addEventListener('submit', async e => {
@@ -129,8 +147,12 @@ $('#loginForm').addEventListener('submit', async e => {
   e.preventDefault();
   try {
     const data = await api('/api/login', {method:'POST', body:{username:$('#loginUsername').value, password:$('#loginPassword').value}});
+    $('#authStatus').classList.add('hidden');
     enterApp(data.user);
-  } catch (err) { toast(err.message, 'error'); }
+  } catch (err) {
+    showAuthScreen(false,err.message);
+    toast(err.message, 'error');
+  }
 });
 
 $('#logoutBtn').onclick = async () => {

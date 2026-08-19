@@ -120,6 +120,21 @@ class SharePointOnlyTests(unittest.TestCase):
         self.assertIn("user.role === 'admin' && !SHAREPOINT_ONLY", source)
         self.assertNotIn("['photo-sync','Fotos no computador']", source)
 
+    def test_boot_always_reveals_an_authentication_form_after_session_error(self):
+        source = (ROOT / 'static' / 'app.js').read_text(encoding='utf-8')
+        html = (ROOT / 'static' / 'index.html').read_text(encoding='utf-8')
+        self.assertIn("function showAuthScreen(needsSetup=false, message='')", source)
+        self.assertIn("showAuthScreen(!!setup.needs_setup,sessionError);", source)
+        self.assertIn("showAuthScreen(false,message);", source)
+        self.assertIn('id="authStatus"', html)
+        self.assertIn('role="alert"', html)
+
+    def test_frontend_cache_version_includes_boot_recovery(self):
+        html = (ROOT / 'static' / 'index.html').read_text(encoding='utf-8')
+        worker = (ROOT / 'static' / 'service-worker.js').read_text(encoding='utf-8')
+        self.assertIn('/app.js?v=sharepoint-fix-boot-20260819', html)
+        self.assertIn('rota-proxima-teste-sharepoint-fix-20260819-v2', worker)
+
 
 class SupabaseResilienceTests(unittest.TestCase):
     def setUp(self):
