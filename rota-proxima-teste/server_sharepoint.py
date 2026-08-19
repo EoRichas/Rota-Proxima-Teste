@@ -64,10 +64,10 @@ def _evidence_context(token, path_prefix):
 
 def _sharepoint_filename(evidence_type, raw, ext):
     prefix = {
-        'collection_material': 'material',
-        'delivery_drum_location': 'tambor-local',
-        'weighing_scale': 'balanca',
-    }.get(evidence_type, 'foto')
+        'collection_material': 'LOCAL',
+        'delivery_drum_location': 'TAMBOR',
+        'weighing_scale': 'PESAGEM',
+    }.get(evidence_type, 'FOTO')
     digest = hashlib.sha256(raw).hexdigest()
     return f'{prefix}_{digest[:20]}.{ext}', digest
 
@@ -81,6 +81,7 @@ def _upload_to_sharepoint(token, data_url, path_prefix):
     body = {
         'route_id': ctx['route_id'],
         'route_name': ctx['route_name'],
+        'pev_id': ctx['pev_id'],
         'pev_name': ctx['pev_name'],
         'evidence_type': ctx['evidence_type'],
         'filename': filename,
@@ -200,7 +201,7 @@ class SharePointHandler(rota.AppHandler):
         if path == '/api/health':
             return self.send_json({
                 'ok': True,
-                'build': 'SHAREPOINT-TEMP-QUEUE-2026-08-14',
+                'build': 'SHAREPOINT-ROTA-PEV-2026-08-19',
                 'listen': f'{rota.HOST}:{rota.PORT}',
                 'render': rota.IS_RENDER,
                 'external_url': os.environ.get('RENDER_EXTERNAL_URL', ''),
@@ -214,7 +215,7 @@ class SharePointHandler(rota.AppHandler):
 
 rota.upload_test_evidence = upload_test_evidence
 rota.AppHandler = SharePointHandler
-rota.BUILD_ID = 'SHAREPOINT-TEMP-QUEUE-2026-08-14'
+rota.BUILD_ID = 'SHAREPOINT-ROTA-PEV-2026-08-19'
 
 
 if __name__ == '__main__':
