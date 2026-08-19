@@ -71,13 +71,6 @@ def _ensure_folder(drive_id, parent_id, name, token):
             return existing
         raise exc
 
-def _category(evidence_type):
-    return {
-        "collection_material": "Coleta",
-        "delivery_drum_location": "Entrega",
-        "weighing_scale": "Pesagem",
-    }.get(evidence_type, "Outros")
-
 @app.route(route="health", methods=["GET"])
 def health(req: func.HttpRequest) -> func.HttpResponse:
     return func.HttpResponse(
@@ -119,12 +112,22 @@ def upload_rota_pev(req: func.HttpRequest) -> func.HttpResponse:
         route_id = str(payload["route_id"])
         route_name = _safe_name(payload.get("route_name") or f"Rota {route_id}")
         route_folder = _safe_name(f"Rota {int(route_id):05d} - {route_name}" if route_id.isdigit() else route_name)
-        pev_folder = _safe_name(payload["pev_name"])
-        category = _category(payload["evidence_type"])
+
+        pev_name = _safe_name(payload["pev_name"])
+        pev_id = str(payload.get("pev_id") or "").strip()
+        if pev_id.isdigit():
+            pev_folder = _safe_name(f"PEV {int(pev_id):04d} - {pev_name}")
+        else:
+            # Compatibilidade com chamadas antigas que ainda não enviem pev_id.
+            pev_folder = pev_name
+
         filename = _safe_name(payload["filename"], "foto.jpg")
 
+        # Estrutura reduzida: Ano -> Mês -> Rota -> PEV.
+        # LOCAL/TAMBOR/PESAGEM passam a ser identificados pelo nome do arquivo,
+        # evitando criar uma subpasta adicional para cada tipo de evidência.
         parent = root_folder_id
-        for segment in [year, month, route_folder, pev_folder, category]:
+        for segment in [year, month, route_folder, pev_folder]:
             parent = _ensure_folder(drive_id, parent, segment, token)
 
         try:
@@ -156,7 +159,7 @@ def upload_rota_pev(req: func.HttpRequest) -> func.HttpResponse:
                 "name": item.get("name"),
                 "webUrl": item.get("webUrl"),
                 "size": item.get("size"),
-                "folder": f"{year}/{month}/{route_folder}/{pev_folder}/{category}",
+                "folder": f"{year}/{month}/{route_folder}/{pev_folder}",
             }, ensure_ascii=False),
             mimetype="application/json",
             status_code=200,
