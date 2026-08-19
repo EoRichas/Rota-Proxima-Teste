@@ -25,6 +25,9 @@ REST=f'{SUPABASE_URL}/rest/v1'
 AUTH=f'{SUPABASE_URL}/auth/v1'
 ADMIN_FN=f'{SUPABASE_URL}/functions/v1/rota-admin'
 USER_AGENT='RotaProxima/3.0'
+SUPABASE_HTTP_TIMEOUT=(5,30)
+SUPABASE_UNAVAILABLE_MESSAGE='O serviço de dados está temporariamente indisponível. Tente novamente em alguns instantes.'
+AUTH_REFRESH_UNAVAILABLE_MESSAGE='Não foi possível renovar sua sessão agora. Tente novamente em alguns instantes.'
 PRIORITY_FACTOR={'urgent':.55,'high':.78,'normal':1.0,'low':1.18}
 SERVICE_TYPE_LABEL={'collection':'Coleta','delivery':'Entrega'}
 BUILD_ID='TESTE-BROWSER-SYNC-FOTOS-2026-08-14'
@@ -361,9 +364,10 @@ def build_collections_pdf(items,date_from,date_to,filters=None):
     doc.build(story,onFirstPage=footer,onLaterPages=footer);return buf.getvalue()
 
 class SupaHTTPError(RuntimeError):
-    def __init__(self,status,message):
+    def __init__(self,status,message,public_message=None):
         super().__init__(message)
         self.status=int(status)
+        self.public_message=public_message or str(message)
 
 class Supa:
     @staticmethod
@@ -374,11 +378,18 @@ class Supa:
         return h
     @staticmethod
     def req(method,table,token,params=None,body=None,prefer=None):
-        r=HTTP.request(method,f'{REST}/{table}',headers=Supa.headers(token,prefer),params=params,json=body,timeout=20)
+        try:
+            r=HTTP.request(method,f'{REST}/{table}',headers=Supa.headers(token,prefer),params=params,json=body,timeout=SUPABASE_HTTP_TIMEOUT)
+        except requests.RequestException as e:
+            # Não expõe host/stack ao navegador e não repete operações de escrita.
+            print(f'[SUPABASE NETWORK ERROR] {method} /rest/v1/{table}: {type(e).__name__}: {e}')
+            raise SupaHTTPError(503,str(e),SUPABASE_UNAVAILABLE_MESSAGE) from e
         if not r.ok:
             try:m=r.json().get('message') or r.json().get('error') or r.text
             except:m=r.text
-            raise SupaHTTPError(r.status_code,m or f'Erro Supabase {r.status_code}')
+            message=m or f'Erro Supabase {r.status_code}'
+            public=SUPABASE_UNAVAILABLE_MESSAGE if r.status_code>=500 else message
+            raise SupaHTTPError(r.status_code,message,public)
         if not r.text:return None
         return r.json()
     @staticmethod
@@ -603,11 +614,26 @@ class AppHandler(BaseHTTPRequestHandler):
                 _,access,new_refresh=cached
                 self.set_auth_headers(access,new_refresh)
                 return access
-            r=HTTP.post(f'{AUTH}/token?grant_type=refresh_token',headers={'apikey':SUPABASE_KEY,'Content-Type':'application/json'},json={'refresh_token':refresh},timeout=15)
+            try:
+                # O refresh token pode já ter sido consumido mesmo sem a resposta chegar.
+                # Por isso não há retry automático desta requisição.
+                r=HTTP.post(f'{AUTH}/token?grant_type=refresh_token',headers={'apikey':SUPABASE_KEY,'Content-Type':'application/json'},json={'refresh_token':refresh},timeout=SUPABASE_HTTP_TIMEOUT)
+            except requests.RequestException as e:
+                print(f'[AUTH REFRESH NETWORK ERROR] {type(e).__name__}: {e}')
+                raise SupaHTTPError(503,str(e),AUTH_REFRESH_UNAVAILABLE_MESSAGE) from e
             if not r.ok:
-                try: print('[AUTH REFRESH ERROR]', r.status_code, r.json())
-                except: print('[AUTH REFRESH ERROR]', r.status_code, r.text[:300])
-                return None
+                try:
+                    payload=r.json()
+                    message=payload.get('message') or payload.get('error_description') or payload.get('error') or r.text
+                except:
+                    payload=r.text[:300]
+                    message=r.text
+                print('[AUTH REFRESH ERROR]',r.status_code,payload)
+                # 400/401/403 representam sessão inválida. Falhas temporárias não devem
+                # virar falso logout nem apagar os cookies de autenticação existentes.
+                if r.status_code in (400,401,403):return None
+                public=AUTH_REFRESH_UNAVAILABLE_MESSAGE if r.status_code>=500 or r.status_code==429 else (message or AUTH_REFRESH_UNAVAILABLE_MESSAGE)
+                raise SupaHTTPError(r.status_code,message or f'Erro Supabase Auth {r.status_code}',public)
             d=r.json();access=d['access_token'];new_refresh=d['refresh_token']
             _REFRESH_RESULT_CACHE[refresh]=(now+_REFRESH_RESULT_TTL,access,new_refresh)
             if len(_REFRESH_RESULT_CACHE)>200:
@@ -808,6 +834,10 @@ class AppHandler(BaseHTTPRequestHandler):
         except (BrokenPipeError,ConnectionResetError,ConnectionAbortedError) as e:
             self._client_disconnected(e)
             return
+        except SupaHTTPError as e:
+            print(f'[API ERROR] GET {path}: SupaHTTPError {e.status}: {e}')
+            status=e.status if 400<=e.status<=599 else 502
+            return self.send_json({'error':e.public_message},status)
         except Exception as e:
             print(f'[API ERROR] GET {path}: {type(e).__name__}: {e}')
             return self.send_json({'error':str(e)},400)
@@ -1059,6 +1089,10 @@ class AppHandler(BaseHTTPRequestHandler):
         except (BrokenPipeError,ConnectionResetError,ConnectionAbortedError) as e:
             self._client_disconnected(e)
             return
+        except SupaHTTPError as e:
+            print(f'[API ERROR] {method} {path}: SupaHTTPError {e.status}: {e}')
+            status=e.status if 400<=e.status<=599 else 502
+            return self.send_json({'error':e.public_message},status)
         except RuntimeError as e:
             msg=str(e);print(f'[API ERROR] {method} {path}: {msg}');status=409 if 'duplicate key' in msg.lower() or 'violates unique' in msg.lower() or 'já existe' in msg.lower() else 400;return self.send_json({'error':msg},status)
         except Exception as e:
