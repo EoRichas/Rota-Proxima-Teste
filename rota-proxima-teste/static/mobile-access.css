@@ -28,42 +28,11 @@
   border-radius: 4px;
 }
 
-.mobile-cloud-box {
-  width: min(92vw, 390px);
-  text-align: center;
+.mobile-install-box {
+  width: min(92vw, 420px);
 }
 
-.mobile-cloud-box .modal-head {
-  text-align: left;
-}
-
-.mobile-qr-wrap {
-  display: flex;
-  justify-content: center;
-  padding: 18px 0 12px;
-}
-
-.mobile-qr-wrap img {
-  width: 240px;
-  max-width: 72vw;
-  height: auto;
-  display: block;
-  background: #fff;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-}
-
-.mobile-cloud-url {
-  margin-top: 12px;
-  padding: 10px 12px;
-  border-radius: 9px;
-  background: var(--surface-2, #f5f7f6);
-  overflow-wrap: anywhere;
-  font-size: 12px;
-}
-
-.mobile-cloud-help {
-  margin: 8px 0 0;
-  line-height: 1.45;
+.mobile-install-help {
+  margin-top: 8px;
+  line-height: 1.55;
 }

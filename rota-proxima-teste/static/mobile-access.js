@@ -1,55 +1,68 @@
 (() => {
-  const CLOUD_URL = 'https://rota-proxima-teste.onrender.com';
+  let installPrompt = null;
+  let installed = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
-  function qrUrl(value) {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=8&data=${encodeURIComponent(value)}`;
+  window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault();
+    installPrompt = event;
+  });
+
+  window.addEventListener('appinstalled', () => {
+    installed = true;
+    installPrompt = null;
+    toast('Rota Próxima instalado no aparelho.', 'success');
+  });
+
+  function isIOS() {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent);
   }
 
-  function openCloudModal() {
-    modal(`
-      <div class="modal-box mobile-cloud-box">
-        <div class="modal-head">
-          <div>
-            <span class="eyebrow">Celular</span>
-            <h2>Abrir Rota Próxima</h2>
+  function fallbackInstallInfo() {
+    if (installed) {
+      return toast('O Rota Próxima já está instalado neste aparelho.', 'success');
+    }
+
+    if (isIOS()) {
+      modal(`
+        <div class="modal-box mobile-install-box">
+          <div class="modal-head">
+            <div><span class="eyebrow">Instalação</span><h2>Instalar no iPhone</h2></div>
+            <button type="button" class="icon-btn modal-close">×</button>
           </div>
+          <div class="info mobile-install-help">
+            Abra esta página no Safari, toque em <strong>Compartilhar</strong> e escolha <strong>Adicionar à Tela de Início</strong>.
+          </div>
+          <div class="form-actions"><button type="button" class="btn primary modal-close">Entendi</button></div>
+        </div>`);
+      return;
+    }
+
+    modal(`
+      <div class="modal-box mobile-install-box">
+        <div class="modal-head">
+          <div><span class="eyebrow">Instalação</span><h2>Instalar Rota Próxima</h2></div>
           <button type="button" class="icon-btn modal-close">×</button>
         </div>
-        <div class="mobile-qr-wrap">
-          <img src="${qrUrl(CLOUD_URL)}" alt="QR Code para abrir o Rota Próxima no celular">
+        <div class="info mobile-install-help">
+          O navegador ainda não liberou a instalação automática. Abra o menu do navegador e escolha <strong>Instalar aplicativo</strong> ou <strong>Adicionar à tela inicial</strong>.
         </div>
-        <p class="mobile-cloud-help muted">Escaneie com a câmera do celular para abrir o ambiente de teste no Render.</p>
-        <div class="mobile-cloud-url">${esc(CLOUD_URL)}</div>
-        <div class="form-actions">
-          <button id="shareMobileCloud" type="button" class="btn secondary">Compartilhar link</button>
-          <button id="copyMobileCloud" type="button" class="btn ghost">Copiar link</button>
-          <button type="button" class="btn primary modal-close">Fechar</button>
-        </div>
+        <div class="form-actions"><button type="button" class="btn primary modal-close">Fechar</button></div>
       </div>`);
+  }
 
-    const shareBtn = document.getElementById('shareMobileCloud');
-    if (shareBtn) shareBtn.onclick = async () => {
-      try {
-        if (navigator.share) {
-          await navigator.share({ title: 'Rota Próxima', text: 'Acesse o Rota Próxima no celular', url: CLOUD_URL });
-        } else {
-          await navigator.clipboard.writeText(CLOUD_URL);
-          toast('Link copiado.', 'success');
-        }
-      } catch (err) {
-        if (err?.name !== 'AbortError') toast('Não foi possível compartilhar o link.', 'error');
-      }
-    };
+  async function requestInstall() {
+    if (installed) return fallbackInstallInfo();
+    if (!installPrompt) return fallbackInstallInfo();
 
-    const copyBtn = document.getElementById('copyMobileCloud');
-    if (copyBtn) copyBtn.onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(CLOUD_URL);
-        toast('Link copiado.', 'success');
-      } catch (_) {
-        toast('Não foi possível copiar o link.', 'error');
+    try {
+      installPrompt.prompt();
+      const choice = await installPrompt.userChoice;
+      if (choice.outcome === 'accepted') {
+        installPrompt = null;
       }
-    };
+    } catch (_) {
+      fallbackInstallInfo();
+    }
   }
 
   function patchLoginAccess() {
@@ -67,12 +80,12 @@
 
     const button = document.createElement('button');
     button.type = 'button';
-    button.id = 'openMobileQr';
+    button.id = 'installMobileApp';
     button.className = 'mobile-qr-trigger';
-    button.setAttribute('aria-label', 'Abrir QR Code para celular');
-    button.title = 'Abrir no celular';
+    button.setAttribute('aria-label', 'Instalar Rota Próxima');
+    button.title = 'Instalar aplicativo';
     button.textContent = '📱';
-    button.onclick = openCloudModal;
+    button.onclick = requestInstall;
     row.appendChild(button);
   }
 
