@@ -1,0 +1,69 @@
+.auth-access-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.mobile-qr-trigger {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transform: translateY(-1px);
+}
+
+.mobile-qr-trigger:hover,
+.mobile-qr-trigger:focus-visible {
+  transform: translateY(-1px) scale(1.08);
+}
+
+.mobile-qr-trigger:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.mobile-cloud-box {
+  width: min(92vw, 390px);
+  text-align: center;
+}
+
+.mobile-cloud-box .modal-head {
+  text-align: left;
+}
+
+.mobile-qr-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 18px 0 12px;
+}
+
+.mobile-qr-wrap img {
+  width: 240px;
+  max-width: 72vw;
+  height: auto;
+  display: block;
+  background: #fff;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.mobile-cloud-url {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: var(--surface-2, #f5f7f6);
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.mobile-cloud-help {
+  margin: 8px 0 0;
+  line-height: 1.45;
+}
