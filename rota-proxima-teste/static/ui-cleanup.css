@@ -1,0 +1,57 @@
+/* Ajustes visuais da simplificação operacional. */
+
+/* Planejamento: mais espaço para Atendimento, Horário e Prioridade. */
+.pev-check {
+  grid-template-columns: auto minmax(0, 1fr) minmax(150px, .72fr) minmax(145px, .68fr) minmax(155px, .72fr);
+  column-gap: 14px;
+}
+
+.planner-control {
+  min-width: 0;
+  gap: 6px;
+}
+
+.planner-control > span {
+  font-size: 11px;
+  letter-spacing: .06em;
+}
+
+.pev-check .planner-control select,
+.pev-check .planner-control input,
+.pev-check .pev-exact-time {
+  min-height: 42px;
+  padding: 9px 11px;
+  font-size: 13px;
+  border-radius: 9px;
+}
+
+/* Endereço da última posição fica mais legível quando for longo. */
+.driver-position-address {
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+@media (max-width: 1100px) {
+  .pev-check {
+    grid-template-columns: auto minmax(0, 1fr) minmax(135px, .7fr) minmax(130px, .65fr) minmax(140px, .7fr);
+    column-gap: 10px;
+  }
+}
+
+@media (max-width: 900px) {
+  .pev-check {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .planner-control {
+    grid-column: 2;
+    width: 100%;
+  }
+
+  .pev-check .planner-control select,
+  .pev-check .planner-control input,
+  .pev-check .pev-exact-time {
+    width: 100%;
+  }
+}
