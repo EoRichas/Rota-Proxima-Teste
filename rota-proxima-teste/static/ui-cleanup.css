@@ -1,9 +1,9 @@
 /* Ajustes visuais da simplificação operacional. */
 
-/* Planejamento: mais espaço para Atendimento, Horário e Prioridade. */
+/* Planejamento: exibe somente Atendimento. Horário/Prioridade vêm da solicitação. */
 .pev-check {
-  grid-template-columns: auto minmax(0, 1fr) minmax(150px, .72fr) minmax(145px, .68fr) minmax(155px, .72fr);
-  column-gap: 14px;
+  grid-template-columns: auto minmax(0, 1fr) minmax(190px, .82fr);
+  column-gap: 16px;
 }
 
 .planner-control {
@@ -16,13 +16,66 @@
   letter-spacing: .06em;
 }
 
-.pev-check .planner-control select,
-.pev-check .planner-control input,
-.pev-check .pev-exact-time {
-  min-height: 42px;
-  padding: 9px 11px;
-  font-size: 13px;
+.pev-check .planner-service-only select,
+.pev-check .pev-service-type {
+  min-height: 44px;
+  padding: 10px 13px;
+  font-size: 14px;
   border-radius: 9px;
+  width: 100%;
+}
+
+/* Solicitação: horário e prioridade ficam condicionados ao checkbox. */
+.request-schedule-toggle {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.request-schedule-toggle input {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  accent-color: var(--primary);
+}
+
+.request-schedule-toggle span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.request-schedule-toggle strong {
+  font-size: 14px;
+}
+
+.request-schedule-toggle small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.request-schedule-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+
+.request-schedule-fields[hidden] {
+  display: none !important;
+}
+
+.request-schedule-fields .field input,
+.request-schedule-fields .field select {
+  width: 100%;
+  min-height: 46px;
 }
 
 /* Endereço da última posição fica mais legível quando for longo. */
@@ -31,27 +84,18 @@
   line-height: 1.45;
 }
 
-@media (max-width: 1100px) {
-  .pev-check {
-    grid-template-columns: auto minmax(0, 1fr) minmax(135px, .7fr) minmax(130px, .65fr) minmax(140px, .7fr);
-    column-gap: 10px;
-  }
-}
-
 @media (max-width: 900px) {
   .pev-check {
     grid-template-columns: auto minmax(0, 1fr);
     align-items: start;
   }
 
-  .planner-control {
+  .planner-service-only {
     grid-column: 2;
     width: 100%;
   }
 
-  .pev-check .planner-control select,
-  .pev-check .planner-control input,
-  .pev-check .pev-exact-time {
-    width: 100%;
+  .request-schedule-fields {
+    grid-template-columns: 1fr;
   }
 }
